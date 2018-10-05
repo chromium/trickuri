@@ -284,6 +284,10 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	flag.Parse()
+	err := os.MkdirAll(*directory, os.ModePerm)
+	if err != nil {
+		log.Fatal(err)
+	}
 	certMap = make(map[string]*tls.Certificate)
 	rootCert, err := loadOrCreateRootCertificate()
 	if err != nil {
