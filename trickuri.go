@@ -232,6 +232,10 @@ func serveEcho(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func serveRootCert(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, *directory+"/root.cer")
+}
+
 // Handler for HTTP tunneling.
 func tunnelHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodConnect {
@@ -276,6 +280,10 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if r.URL.EscapedPath() == "/echo" {
 		serveEcho(w, r)
+		return
+	}
+	if r.URL.EscapedPath() == "/root.cer" {
+		serveRootCert(w, r)
 		return
 	}
 	testcaseHandler := http.FileServer(http.Dir("testcases"))
