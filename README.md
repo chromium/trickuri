@@ -38,7 +38,7 @@ The proxy may be configured in one of two ways:
 1.  As a "static proxy", running on port 1270 (by default) of the machine
     running the proxy.
 2.  As an "autoconfigured proxy" where the client pulls
-    http://proxypc:1270/proxy.pac as the proxy determination script.
+    http://<IP/Hostname of computer running trickuri>:1270/proxy.pac as the proxy determination script.
 
 The advantage of the latter configuration is that it allows the proxy to specify
 that it should be bypassed for certain URLs, e.g. those used by SafeBrowsing,
