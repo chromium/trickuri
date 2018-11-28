@@ -22,7 +22,7 @@ to verify that the origin is visible and unambiguously identified to the user.
 
 ## Testcases
 
-Files in the testcases folder will be served as if they were served from any
+Files in the ```testcases``` folder will be served as if they were served from any
 URL, i.e. with the proxy running, visiting google.com/samplepathtest will serve
 testcases/samplepathtest. Additional test cases can be added to the testcases
 folder.
