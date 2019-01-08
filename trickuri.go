@@ -34,6 +34,7 @@ import (
 	"os"
 	"runtime"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -286,8 +287,13 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 		serveRootCert(w, r)
 		return
 	}
-	testcaseHandler := http.FileServer(http.Dir("testcases"))
-	testcaseHandler.ServeHTTP(w, r)
+	if strings.HasPrefix(r.URL.EscapedPath(), "/web-platform-tests") {
+		testcaseHandler := http.FileServer(http.Dir("."))
+		testcaseHandler.ServeHTTP(w, r)
+		return
+	}
+	// Serve an index file that explains how to use the different testcases.
+	http.ServeFile(w, r, "index.html")
 }
 
 func main() {
