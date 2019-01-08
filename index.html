@@ -1,9 +1,20 @@
 <html>
   <head>
-    <title>Sample Base URLs</title>
+    <title>Trickuri test cases</title>
   </head>
   <body>
-    <ul>
+    <p>
+      Welcome to Trickuri!
+    </p>
+    <p>
+      Trickuri has two types of test cases: tricky URLs and web platform tests.
+    </p>
+    <h1>Tricky URLs</h1>
+    <p>
+      Load these URLs in a web browser to test how the browser's main URL
+      display handles them.
+    </p>
+        <ul>
       <li><a href="https://example.test">Baseline case (example.test) (https)</a></li>
       <li><a href="http://example.test">Baseline case (example.test) (http)</a></li>
       <li><a href="https://مثال.com/">RTL url with LTR tld (https)</a></li>
@@ -17,6 +28,18 @@
       <li><a href="https://еxample.test">URL uses cyrillic е instead of e in example.test</a></li>
       <li><a href="https://examp1e.test">URL uses number one instead of l in example.test</a></li>
       <li><a href="https://evil.test">Evil.test, for testing paths do not cause the evil.test origin to be hidden</a></li>
+      <li><a href="verylongpathverylongpathverylongpathverylongpathverylongpathverylongpathexample.test">A very long path ending in example.test</a>
     </ul>
+
+    <h1>Web platform tests</h1>
+    <p>
+      These tests exercise individual web platform features to test how they
+      display URLs. After loading one of the tricky URLs above, exercise these
+      web platform tests to observe how the individual features display the
+      tricky URL.
+    </p>
+    <p>
+      <a href="/web-platform-tests">See the web platform tests</a>
   </body>
 </html>
+
