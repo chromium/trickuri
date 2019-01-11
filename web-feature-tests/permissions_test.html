@@ -1,10 +1,16 @@
 <html>
   <head>
     <script>
+      // Redirect to https because permission prompts don't fire on http.
+      if (window.location.protocol != "https:") {
+        window.location.protocol = "https";
+      }
       navigator.mediaDevices.getUserMedia({ audio: true, video: false })
     </script>
     <title>Permissions Test</title>
   </head>
   <body>
+    <p>This page tests how a web browser displays a URL in a permission
+      prompt.</p>
   </body>
 </html>
