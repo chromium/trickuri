@@ -287,7 +287,7 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 		serveRootCert(w, r)
 		return
 	}
-	if strings.HasPrefix(r.URL.EscapedPath(), "/web-platform-tests") {
+	if strings.HasPrefix(r.URL.EscapedPath(), "/web-feature-tests") {
 		testcaseHandler := http.FileServer(http.Dir("."))
 		testcaseHandler.ServeHTTP(w, r)
 		return
