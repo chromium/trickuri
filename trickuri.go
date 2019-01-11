@@ -237,6 +237,18 @@ func serveRootCert(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, *directory+"/root.cer")
 }
 
+// If the request did not contain HTTP Auth headers, writes a 401 Unauthorized response and returns false. Otherwise, returns true without writing a response.
+func serveHttpAuth(w http.ResponseWriter, r *http.Request) bool {
+     _, _, ok := r.BasicAuth()
+     if !ok {
+        w.Header().Set("WWW-Authenticate", "Basic realm=test")
+        w.WriteHeader(401)
+        w.Write([]byte("Unauthorized"))
+        return false
+     }
+     return true
+}
+
 // Handler for HTTP tunneling.
 func tunnelHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodConnect {
@@ -287,6 +299,11 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 		serveRootCert(w, r)
 		return
 	}
+        if r.URL.EscapedPath() == "/web-feature-tests/http-auth/" {
+           if !serveHttpAuth(w, r) {
+                return
+                }
+        }
 	if strings.HasPrefix(r.URL.EscapedPath(), "/web-feature-tests") {
 		testcaseHandler := http.FileServer(http.Dir("."))
 		testcaseHandler.ServeHTTP(w, r)
