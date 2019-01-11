@@ -2,43 +2,58 @@
   <head>
     <title>Trickuri test cases</title>
   </head>
+  <style>
+    body {
+      font-family: Arial,sans-serif;
+      font-size: 13px;
+    }
+  </style>
   <body>
+    <h1>Welcome to Trickuri!</h1>
     <p>
-      Welcome to Trickuri!
+      Trickuri has two types of test cases: tricky URLs and web feature
+      tests. The web feature tests can be loaded under each of the tricky URLs
+      to test how each web feature displays the tricky URL.
     </p>
-    <p>
-      Trickuri has two types of test cases: tricky URLs and web feature tests.
-    </p>
-    <h1>Tricky URLs</h1>
+    <h2>Tricky URLs</h2>
     <p>
       Load these URLs in a web browser to test how the browser's main URL
       display handles them.
     </p>
-        <ul>
+      <h3>Simple</h3>
+      <ul>
       <li><a href="https://example.test">Baseline case (example.test) (https)</a></li>
       <li><a href="http://example.test">Baseline case (example.test) (http)</a></li>
+      <li><a href="https://evil.test">Evil.test, for testing paths do not cause the evil.test origin to be hidden</a></li>
+      <li><a href="https://user:pass@example.test">URL with username and password</a></li>
+      <li><a href="https://example.test:8080">URL with non-default port</a></li>
+      <li><a href="http://127.0.0.1">URL with IPv4 literal hostname</a></li>
+      <li><a href="http://[::1]">URL with IPv6 literal hostname</a></li>
+      <li><a href="data:,Hello">data: URL</a> (copy and paste URL in Chrome, which disallows top-level navigations to data: URLs)</li>
+      </ul>
+
+      <h3>IDNs, lookalikes, and unusual characters</h3>
+      <ul>
       <li><a href="https://مثال.com/">RTL url with LTR tld (https)</a></li>
       <li><a href="https://مثال.إختبار">RTL url with RTL tld (http)</a></li>
       <li><a href="https://example.إختبار">LTR url with RTL tld (https)</a></li>
       <li><a href="http://مثال.com/">RTL url with LTR tld (http)</a></li>
       <li><a href="http://مثال.إختبار">RTL url with RTL tld (http)</a></li>
       <li><a href="http://example.إختبار">LTR url with RTL tld (http)</a></li>
-      <li><a href="https://extremelylongurlmeanttotriggerelisionendinginadifferenturlextremelylongurlmeanttotriggerelisionendinginadifferenturlextremelylongurlmeanttotriggerelisionendinginadifferenturlexample.test">Extremely long URL to trigger elision, ending in an url that looks similar to example.test</a></li>
-      <li><a href="https://example.test----extremelylongurlmeanttotriggerelisionendinginadifferenturlextremelylongurlmeanttotriggerelisionendinginadifferenturlextremelylongurlmeanttotriggerelisionendinginadifferenturl.test">Extremely long URL to trigger elision, starting with a url that looks similar to example.test</a></li>
       <li><a href="https://еxample.test">URL uses cyrillic е instead of e in example.test</a></li>
       <li><a href="https://examp1e.test">URL uses number one instead of l in example.test</a></li>
-      <li><a href="https://evil.test">Evil.test, for testing paths do not cause the evil.test origin to be hidden</a></li>
-      <li><a href="verylongpathverylongpathverylongpathverylongpathverylongpathverylongpathexample.test">A very long path ending in example.test</a>
-      <li><a href="https://user:pass@example.test">URL with username and password</a></li>
-      <li><a href="https://example.test:8080">URL with non-default port</a></li>
       <li><a href="https://example.test/space-path-test ">URL with non-breaking space in path (U+202F)</a></li>
       <li><a href="https://xn--https-5w14d.cf/paypal.com">URL with an emoji in the domain</a></li>
-      <li><a href="http://127.0.0.1">URL with IPv4 literal hostname</a></li>
-      <li><a href="http://[::1]">URL with IPv6 literal hostname</a></li>
-      <li><a href="data:,Hello">data: URL</a> (copy and paste URL in Chrome, which disallows top-level navigations to data: URLs</li>
-    </ul>
+      </ul>
 
-    <h1>Web feature tests</h1>
+      <h3>Long URLs</h3>
+      <ul>
+      <li><a href="https://extremelylongurlmeanttotriggerelisionendinginadifferenturlextremelylongurlmeanttotriggerelisionendinginadifferenturlextremelylongurlmeanttotriggerelisionendinginadifferenturlexample.test">Extremely long URL to trigger elision, ending in an url that looks similar to example.test</a></li>
+      <li><a href="https://example.test----extremelylongurlmeanttotriggerelisionendinginadifferenturlextremelylongurlmeanttotriggerelisionendinginadifferenturlextremelylongurlmeanttotriggerelisionendinginadifferenturl.test">Extremely long URL to trigger elision, starting with a url that looks similar to example.test</a></li>
+      <li><a href="verylongpathverylongpathverylongpathverylongpathverylongpathverylongpathexample.test">A very long path ending in example.test</a>
+      </ul>
+
+    <h2>Web feature tests</h2>
     <p>
       These tests exercise individual web platform features to test how they
       display URLs. After loading one of the tricky URLs above, exercise these
