@@ -1,0 +1,22 @@
+<html>
+  <head>
+    <script>
+      // Redirect to https because permission prompts don't fire on http.
+      if (window.location.protocol != "https:") {
+        window.location.protocol = "https";
+      }
+      if (Notification.permission === "granted") {
+        var notification = new Notification("Hello!");
+      } else if (Notification.permission !== "denied") {
+        Notification.requestPermission(function (permission) {
+          if (permission === "granted") {
+            var notification = new Notification("Hello!");
+          }
+        });
+      }
+    </script>
+    <title>Notifcations Test</title>
+  </head>
+  <body>
+  </body>
+</html>
