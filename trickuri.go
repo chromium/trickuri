@@ -146,7 +146,7 @@ func writeCertificate(certificate []byte, key *rsa.PrivateKey, filename string) 
 func loadOrCreateRootCertificate() (tls.Certificate, error) {
 	rootKeys, err := tls.LoadX509KeyPair(*directory+"/root.cer", *directory+"/root.pem")
 	if err != nil {
-		log.Println("root.cer failed to load. Recreating root certificate.")
+		fmt.Println("root.cer failed to load. Recreating root certificate.")
 		rootCert, rootKey, err := createRootCertificate()
 		if err != nil {
 			return tls.Certificate{}, err
@@ -313,9 +313,14 @@ func main() {
 	}
 	caKey = rootCert.PrivateKey
 
-	log.Printf("Download the root certificate at http://localhost:%d/root.cer and import it into browser/OS certificate store.", *port)
-	log.Printf("Set your proxy to \"http://localhost:%[1]d/proxy.pac\" or localhost:%[1]d. Using pac file will pass through requests to google.com and microsoft.com for common Chrome/Windows requests.", *port)
-	log.Println("Ready for requests")
+	fmt.Println("\n")
+	fmt.Println("----Welcome to Trickuri!----")
+	fmt.Println("This tool facilitates testing of applications that displays URLs to users.\n")
+	fmt.Println("Trickuri is ready to receive requests.\n")
+
+	fmt.Printf("1.) Download the root certificate at http://localhost:%d/root.cer and import it into your browser/OS certificate store. See README.md for instructions on how to import a root certificate.\n", *port)
+	fmt.Printf("2.) Set the proxy server of the application under test to \"http://localhost:%[1]d/proxy.pac\" or localhost:%[1]d. Using the pac file will pass through requests to google.com and microsoft.com for common Chrome/Windows requests. See https://www.chromium.org/developers/design-documents/network-settings for instructions on configuring Chrome's proxy server, if you are testing Chrome.\n", *port)
+	fmt.Printf("3.) Visit https://example.com (or any other URL) to see a list of test cases.\n\n")
 
 	cfg := &tls.Config{
 		CipherSuites: []uint16{
