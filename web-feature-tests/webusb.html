@@ -1,0 +1,15 @@
+<html>
+  <head>
+    <script>
+      // Redirect to https because permission prompts don't fire on http.
+      if (window.location.protocol != "https:") {
+        window.location.protocol = "https";
+      }
+    </script>
+    <title>WebUSB Test</title>
+  </head>
+  <body>
+    <p>Click <a href="#" onclick="navigator.usb.requestDevice({filters: [{}]})">here</a>
+      to trigger a WebUSB chooser.</p>
+  </body>
+</html>
