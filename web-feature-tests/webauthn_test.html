@@ -1,0 +1,26 @@
+<html>
+  <head>
+    <script>
+      // Redirect to https because WebAuthn doesn't work on http.
+      if (window.location.protocol != "https:") {
+        window.location.protocol = "https";
+      }
+
+      navigator.credentials.create({ publicKey: {
+        challenge: new Uint8Array(32),
+        rp: { id: location.hostname, name: "ACME Corporation" },
+        user: {
+          id: new Uint8Array(8),
+          name: "jamiedoe",
+          displayName: "Jamie Doe"
+        },
+        pubKeyCredParams: [ {type: "public-key", alg: -7} ]
+      }});
+    </script>
+    <title>WebAuthn Test</title>
+  </head>
+  <body>
+    <p>This page tests how a web browser displays a URL in a WebAuthn
+      prompt.</p>
+  </body>
+</html>
