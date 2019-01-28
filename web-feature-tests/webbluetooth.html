@@ -1,0 +1,15 @@
+<html>
+  <head>
+    <script>
+      // Redirect to https because permission prompts don't fire on http.
+      if (window.location.protocol != "https:") {
+        window.location.protocol = "https";
+      }
+    </script>
+    <title>WebBluetooth Test</title>
+  </head>
+  <body>
+    <p>Click <a href="#" onclick="navigator.bluetooth.requestDevice({acceptAllDevices:true})">here</a>
+      to trigger a WebBluetooth chooser.</p>
+  </body>
+</html>
