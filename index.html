@@ -29,10 +29,13 @@
       <li><a href="https://example.test:8080">URL with non-default port</a></li>
       <li><a href="http://127.0.0.1">URL with IPv4 literal hostname</a></li>
       <li><a href="http://[::1]">URL with IPv6 literal hostname</a></li>
-      <li><a href="data:,Hello">data: URL</a> (copy and paste URL in Chrome, which disallows top-level navigations to data: URLs)</li>
+      <li><a href="data:,Hello">data: URL</a> (copy and paste URL in Chrome, which disallows top-level navigations to data: URLs)</a></li>
+      <li><a href="ftp://example.test">ftp:// URL</a></li>
       </ul>
 
-      <h3>IDNs, lookalikes, and unusual characters</h3>
+      <h3>IDNs and homoglyphs</h3>
+
+      <h4>RTL</h4>
       <ul>
       <li><a href="https://مثال.com/">RTL url with LTR tld (https)</a></li>
       <li><a href="https://مثال.إختبار">RTL url with RTL tld (http)</a></li>
@@ -40,17 +43,48 @@
       <li><a href="http://مثال.com/">RTL url with LTR tld (http)</a></li>
       <li><a href="http://مثال.إختبار">RTL url with RTL tld (http)</a></li>
       <li><a href="http://example.إختبار">LTR url with RTL tld (http)</a></li>
-      <li><a href="https://еxample.test">URL uses cyrillic е instead of e in example.test</a></li>
-      <li><a href="https://examp1e.test">URL uses number one instead of l in example.test</a></li>
+      </ul>
+
+
+      <h4>Homoglyphs</h4>
+      <ul>
+      <li><a href="https://еxample.test">URL uses Cyrillic е instead of e</a></li>
+      <li><a href="https://еxӑmple.test">URL uses Cyrillic ӑ instead of a</a></li>
+      <li><a href="https://a.example.test">URL uses Cyrillic a in its own label</a></li>
+      <li><a href="https://ӑ.example.test">URL uses Cyrillic ӑ in its own label</a></li>
+      <li><a href="https://examp1e.test">URL uses number one instead of l</a></li>
+      <li><a href="https://bankofthevvest.com">URL uses "vv" instead of "w"</a></li>
+      <li><a href="https://go0gle.com">URL uses "0" instead of "o"</a></li>
+      </ul>
+
+      <h3>Unusual characters</h3>
+      <ul>
       <li><a href="https://example.test/space-path-test ">URL with non-breaking space in path (U+202F)</a></li>
-      <li><a href="https://xn--https-5w14d.cf/paypal.com">URL with an emoji in the domain</a></li>
+      <li><a href="https://example.test/?space-path-test= ">URL with non-breaking space in query (U+202F)</a></li>
+      <li><a href="https://example.test/#space-path-test ">URL with non-breaking space in fragment (U+202F)</a></li>
+      <li><a href="https://xn--https-5w14d.com">URL with a lock emoji in the domain</a></li>
+      <li><a href="https://xn--banana-ox34e.com">URL with a banana emoji in the domain</a></li>
+      <li><a href="https://🍌.example.com">URL with an emoji in its own label</a></li>
+      <li><a href="https://banana.🍌">URL with an emoji in its TLD</a></li>
+      <li><a href="https://example.com/🔒">URL with a lock emoji in the path</a></li>
+      <li><a href="https://example.com/🍌">URL with a banana emoji in the path</a></li>
+      <li><a href="https://example.com/?foo=🔒">URL with a lock emoji in the query</a></li>
+      <li><a href="https://example.com/?foo=🍌">URL with a banana emoji in the query</a></li>
+      <li><a href="https://example.com/foo#🔒">URL with a lock emoji in the fragment</a></li>
+      <li><a href="https://example.com/foo#🍌">URL with a banana emoji in the fragment</a></li>
+      <li><a href="https://example.com/foo   bar">URL with spaces in the path</a></li>
+      <li><a href="https://example.com/?foo=   bar">URL with spaces in the query</a></li>
+      <li><a href="https://example.com/#foo   bar">URL with spaces in the fragment</a></li>
       </ul>
 
       <h3>Long URLs</h3>
       <ul>
       <li><a href="https://extremelylongurlmeanttotriggerelisionendinginadifferenturlextremelylongurlmeanttotriggerelisionendinginadifferenturlextremelylongurlmeanttotriggerelisionendinginadifferenturlexample.test">Extremely long URL to trigger elision, ending in an url that looks similar to example.test</a></li>
       <li><a href="https://example.test----extremelylongurlmeanttotriggerelisionendinginadifferenturlextremelylongurlmeanttotriggerelisionendinginadifferenturlextremelylongurlmeanttotriggerelisionendinginadifferenturl.test">Extremely long URL to trigger elision, starting with a url that looks similar to example.test</a></li>
-      <li><a href="verylongpathverylongpathverylongpathverylongpathverylongpathverylongpathexample.test">A very long path ending in example.test</a>
+      <li><a href="verylongpathverylongpathverylongpathverylongpathverylongpathverylongpathexample.test">A very long path ending in example.test</a></li>
+      <li><a href="?verylongpathverylongpathverylongpathverylongpathverylongpathverylongpathexample.test">A very long query ending in example.test</a></li>
+      <li><a href="#verylongpathverylongpathverylongpathverylongpathverylongpathverylongpathexample.test">A very long fragment ending in example.test</a></li>
+      <li><a href="https://example.example.example.example.example.example.example.example.example.example.example.test">URL with many subdomains</a></li>
       </ul>
 
     <h2>Web feature tests</h2>
