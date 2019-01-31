@@ -64,4 +64,4 @@ http://localhost:1270/root.cer once Trickuri is running.
 
 -h Sets the port for the https server, defaults to 8443.
 
--d Sets the directory for certificate storage, defaults to ~/.trickuri
+-d Sets the directory for certificate storage, defaults to ~/.config/trickuri
