@@ -24,21 +24,21 @@ to verify that the origin is visible and unambiguously identified to the user.
 
 Files in the ```testcases``` folder will be served as if they were served from any
 URL, i.e. with the proxy running, visiting example.com/samplepathtest will serve
-testcases/samplepathtest. Additional test cases can be added to the testcases
+testcases/samplepathtest. Additional test cases can be added to the ```testcases```
 folder.
 
 ## Running
 
-To run Trickuri, run 'go run trickuri.go' in the source directory.
+To run Trickuri, run ```go run trickuri.go``` in the source directory.
 
 ## Proxy configuration
 
 The proxy may be configured in one of two ways:
 
-1.  As a "static proxy", running on port 1270 (by default) of the machine
+1.  As a "static proxy", running on port ```1270``` (by default) of the machine
     running the proxy.
 2.  As an "autoconfigured proxy" where the client pulls
-    http://<IP/hostname of computer running Trickuri>:1270/proxy.pac as the
+    ```http://<IP/hostname of computer running Trickuri>:1270/proxy.pac``` as the
     proxy determination script.
 
 The advantage of the latter configuration is that it allows the proxy to specify
@@ -60,8 +60,8 @@ http://localhost:1270/root.cer once Trickuri is running.
 
 ## Flags
 
--p Sets the port in which the tool will listen, defaults to 1270.
+```-p``` Sets the port in which the tool will listen, defaults to ```1270```.
 
--h Sets the port for the https server, defaults to 8443.
+```-h``` Sets the port for the https server, defaults to ```8443```.
 
--d Sets the directory for certificate storage, defaults to ~/.trickuri
+```-d``` Sets the directory for certificate storage, defaults to ```~/.trickuri```
