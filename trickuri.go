@@ -115,7 +115,7 @@ func newRootCertificate() ([]byte, *rsa.PrivateKey, error) {
 	return certBytes, private, nil
 }
 
-// writeCertificate creates two files using the given contents and paths.
+// writeCertificate writes the provided certificate and key to files in the specified paths.
 func writeCertificate(cert []byte, key *rsa.PrivateKey, certPath, keyPath string) error {
 	certFile, err := os.Create(certPath)
 	if err != nil {
