@@ -42,7 +42,7 @@ import (
 var (
 	port      = flag.Int("p", 1270, "port on which to listen")
 	httpsPort = flag.Int("h", 8443, "port on which the HTTPS proxy will listen")
-	directory = flag.String("d", userHomeDir()+"/.trickuri", "default directory on which to save certificates")
+	directory = flag.String("d", userHomeDir()+"/.config/trickuri", "default directory on which to save certificates")
 )
 
 // Globals
