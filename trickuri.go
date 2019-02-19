@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Generates test cases for URL spoofing vulnerabilities.
+// Trickuri generates test cases for URL spoofing vulnerabilities.
 package main
 
 import (
@@ -32,28 +32,30 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path"
 	"runtime"
 	"strconv"
 	"strings"
 	"time"
 )
 
-// Command line flags
 var (
 	port      = flag.Int("p", 1270, "port on which to listen")
 	httpsPort = flag.Int("h", 8443, "port on which the HTTPS proxy will listen")
-	directory = flag.String("d", userHomeDir()+"/.config/trickuri", "default directory on which to save certificates")
+	directory = flag.String("d", userHomeDir()+"/.config/trickuri", "default directory in which to save certificates")
 )
 
-// Globals
 var (
-	caKey       crypto.PrivateKey
-	caCert      *x509.Certificate
-	certMap     map[string]*tls.Certificate
-	lastTunHost string
+	caKey   crypto.PrivateKey
+	caCert  *x509.Certificate
+	certMap = make(map[string]*tls.Certificate)
+
+	// TODO: fix the data race around this variable, either with a lock on this
+	// variable, or (possibly better) by using a channel.
+	lastTunneledHost string
 )
 
-// Multi-platform code to get user home directory, used for the default certificate storage path.
+// userHomeDir returns a suitable directory for the default certificate storage path.
 func userHomeDir() string {
 	if runtime.GOOS == "windows" {
 		home := os.Getenv("HOMEDRIVE") + os.Getenv("HOMEPATH")
@@ -65,170 +67,178 @@ func userHomeDir() string {
 	return os.Getenv("HOME")
 }
 
-// Common certificate generation code
-func createCertificateTemplate() (*x509.Certificate, error) {
-	notBefore := time.Now().AddDate(0, 0, -7) // Mitigate clock-skew between this server and the client.
-	notAfter := notBefore.AddDate(1, 0, 7)    // Certs are valid for one year from now.
-	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
-	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
+// newCertificate returns an initialized certificate with usable values.
+func newCertificate() (*x509.Certificate, error) {
+	maxSerial := new(big.Int).Lsh(big.NewInt(1), 128)
+	serial, err := rand.Int(rand.Reader, maxSerial)
 	if err != nil {
 		return nil, err
 	}
 
-	certTemplate := &x509.Certificate{
-		SerialNumber: serialNumber,
+	return &x509.Certificate{
+		SerialNumber: serial,
 		Subject: pkix.Name{
 			Organization: []string{"TrickUri Interception Certificate"},
 		},
-		NotBefore:             notBefore,
-		NotAfter:              notAfter,
+		NotBefore:             time.Now().AddDate(0, 0, -7), // mitigate clock-skew
+		NotAfter:              time.Now().AddDate(1, 0, 7),
 		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 		BasicConstraintsValid: true,
-	}
-
-	return certTemplate, nil
+	}, nil
 }
 
-// Returns a root certificate and its key.
-func createRootCertificate() ([]byte, *rsa.PrivateKey, error) {
-	priv, err := rsa.GenerateKey(rand.Reader, 2048)
+// newRootCertificate returns a root certificate and its key.
+func newRootCertificate() ([]byte, *rsa.PrivateKey, error) {
+	private, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	certTemplate, err := createCertificateTemplate()
+	cert, err := newCertificate()
+	if err != nil {
+		return nil, nil, err
+	}
+	cert.IsCA = true
+	cert.MaxPathLen = 0
+	cert.MaxPathLenZero = true
+	cert.Subject = pkix.Name{Organization: []string{"TrickUri Root"}}
+	hash := sha256.Sum256(private.PublicKey.N.Bytes())
+	cert.SubjectKeyId = hash[:]
+	cert.KeyUsage |= x509.KeyUsageCertSign
+
+	certBytes, err := x509.CreateCertificate(rand.Reader, cert, cert, &private.PublicKey, private)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	var cerBytes []byte
-	certTemplate.IsCA = true
-	certTemplate.MaxPathLen = 0
-	certTemplate.MaxPathLenZero = true
-	certTemplate.Subject = pkix.Name{Organization: []string{"TrickUri Root"}}
-	hash := sha256.Sum256(priv.PublicKey.N.Bytes())
-	certTemplate.SubjectKeyId = hash[:]
-	certTemplate.KeyUsage |= x509.KeyUsageCertSign
-	cerBytes, err = x509.CreateCertificate(rand.Reader, certTemplate, certTemplate, &priv.PublicKey, priv)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return cerBytes, priv, nil
+	return certBytes, private, nil
 }
 
-// Writes |certificate| to |filename|.cer and |key| to |filename|.pem.
-func writeCertificate(certificate []byte, key *rsa.PrivateKey, filename string) error {
-	certOut, err := os.Create(*directory + "/" + filename + ".cer")
+// writeCertificate writes the provided certificate and key to files in the specified paths.
+func writeCertificate(cert []byte, key *rsa.PrivateKey, certPath, keyPath string) error {
+	certFile, err := os.Create(certPath)
 	if err != nil {
 		return err
 	}
-	err = pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: certificate})
-	certOut.Close()
-	if err != nil {
+	if err := pem.Encode(certFile, &pem.Block{Type: "CERTIFICATE", Bytes: cert}); err != nil {
+		return err
+	}
+	if err := certFile.Close(); err != nil {
 		return err
 	}
 
-	keyOut, err := os.OpenFile(*directory+"/"+filename+".pem", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	keyFile, err := os.OpenFile(keyPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
 		return err
 	}
-	err = pem.Encode(keyOut, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(key)})
-	keyOut.Close()
-	if err != nil {
+	if err := pem.Encode(keyFile, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(key)}); err != nil {
 		return err
 	}
+	if err := keyFile.Close(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
-// If a root certificate and key exist in the trickuri directory, loads them, otherwise creates them.
-func loadOrCreateRootCertificate() (tls.Certificate, error) {
-	rootKeys, err := tls.LoadX509KeyPair(*directory+"/root.cer", *directory+"/root.pem")
+// rootCertificate returns a root certificate, either loaded from the given
+// directory, or created and saved.
+func rootCertificate(directory string) (tls.Certificate, error) {
+	certPath := path.Join(directory, "root.cer")
+	keyPath := path.Join(directory, "root.pem")
+
+	rootKeys, err := tls.LoadX509KeyPair(certPath, keyPath)
 	if err != nil {
-		fmt.Println("root.cer failed to load. Recreating root certificate.")
-		rootCert, rootKey, err := createRootCertificate()
+		log.Println("Failed to load root certificate. Recreating root certificate.")
+		rootCert, rootKey, err := newRootCertificate()
 		if err != nil {
 			return tls.Certificate{}, err
 		}
-		if err := writeCertificate(rootCert, rootKey, "root"); err != nil {
+		if err := writeCertificate(rootCert, rootKey, certPath, keyPath); err != nil {
 			return tls.Certificate{}, err
 		}
-		return tls.LoadX509KeyPair(*directory+"/root.cer", *directory+"/root.pem")
+		return tls.LoadX509KeyPair(certPath, keyPath)
 	}
 	return rootKeys, err
 }
 
-// Generates a certificate for |hostname|.
-func generateCertificate(hostname string) (*tls.Certificate, error) {
+// newHostCertificate returns a certificate for the given hostname.
+func newHostCertificate(hostname string) (*tls.Certificate, error) {
 	priv, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		return nil, err
 	}
-	certTemplate, err := createCertificateTemplate()
+
+	cert, err := newCertificate()
 	if err != nil {
 		return nil, err
 	}
 	if ip := net.ParseIP(hostname); ip != nil {
-		certTemplate.IPAddresses = append(certTemplate.IPAddresses, ip)
+		cert.IPAddresses = append(cert.IPAddresses, ip)
 	} else {
-		certTemplate.DNSNames = append(certTemplate.DNSNames, hostname)
+		cert.DNSNames = append(cert.DNSNames, hostname)
 	}
-	cerBytes, err := x509.CreateCertificate(rand.Reader, certTemplate, caCert, &priv.PublicKey, caKey)
+
+	certBytes, err := x509.CreateCertificate(rand.Reader, cert, caCert, &priv.PublicKey, caKey)
 	if err != nil {
 		return nil, err
 	}
+
 	return &tls.Certificate{
-		Certificate: [][]byte{cerBytes},
+		Certificate: [][]byte{certBytes},
 		PrivateKey:  priv,
 	}, nil
 }
 
-// Retrieves the certificate for |info| if it has been created before, otherwise generates it and returns it.
+// certificate returns a matching certificate, either from a cache or by generating a new one.
 func certificate(info *tls.ClientHelloInfo) (*tls.Certificate, error) {
 	var hostname string
 	if len(info.ServerName) > 0 {
 		hostname = info.ServerName
 	} else {
 		// If the SNI hostname is empty (e.g., for IP addresses), create a certificate for the last tunneled hostname.
-		hostname = lastTunHost
+		hostname = lastTunneledHost
 	}
-	if cert := certMap[hostname]; cert != nil {
+
+	if cert, ok := certMap[hostname]; ok {
 		return cert, nil
 	}
-	cert, err := generateCertificate(hostname)
+
+	cert, err := newHostCertificate(hostname)
 	if err != nil {
 		return nil, err
 	}
 	certMap[hostname] = cert
+
 	return cert, nil
 }
 
-// Serve a proxy configuration script that directs the client to go direct for responses
-// that should not be generated from this tool. This helps ensure that Chrome/Windows/etc
-// are not unduly affected by our HTTP(S) interceptions.
-func serveProxyConfigurationScript(w http.ResponseWriter, _ *http.Request) {
+const pacFmt = `
+function FindProxyForURL(url, host) {
+        // Bypass list. See https://findproxyforurl.com/pac-functions/ for functions.
+        if (shExpMatch(host, "*.google.com")) return "DIRECT";
+        if (shExpMatch(host, "*.gstatic.com")) return "DIRECT";
+        if (shExpMatch(host, "*.googleusercontent.com")) return "DIRECT";
+        if (shExpMatch(host, "*.googleapis.com")) return "DIRECT";
+        if (shExpMatch(host, "*.microsoft.com")) return "DIRECT";
+        if (dnsDomainLevels(host) < 1) return "DIRECT";
+
+        // Return a response from TrickUri.
+        return "PROXY localhost:%d";
+}`
+
+// servePAC serves a proxy auto configuration script that directs the client to
+// go direct for responses that should not be generated from this tool. This helps
+// ensure that Chrome/Windows/etc are not unduly affected by our HTTP(S) interceptions.
+func servePAC(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/x-ns-proxy-autoconfig; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, `function FindProxyForURL(url, host) {
-			// Bypass list. See https://findproxyforurl.com/pac-functions/ for functions.
-			if (shExpMatch(host, "*.google.com")) return "DIRECT";
-			if (shExpMatch(host, "*.gstatic.com")) return "DIRECT";
-			if (shExpMatch(host, "*.googleusercontent.com")) return "DIRECT";
-			if (shExpMatch(host, "*.googleapis.com")) return "DIRECT";
-			if (shExpMatch(host, "*.microsoft.com")) return "DIRECT";
-			if (dnsDomainLevels(host) < 1) return "DIRECT";
-
-			// Return a response from TrickUri.
-			return "PROXY localhost:%d";
-		}`,
-		*port)
+	fmt.Fprintf(w, pacFmt, *port)
 }
 
-// Serve a printout of the request |r|.
 func serveEcho(w http.ResponseWriter, r *http.Request) {
-	err := r.Write(w)
-	if err != nil {
+	if err := r.Write(w); err != nil {
 		log.Println(err)
 	}
 }
@@ -237,26 +247,26 @@ func serveRootCert(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, *directory+"/root.cer")
 }
 
-// If the request did not contain HTTP Auth headers, writes a 401 Unauthorized response and returns false. Otherwise, returns true without writing a response.
+// serveHttpAuth returns whether the request contains HTTP Auth headers.
+// When it does, it also writes a 401 Unauthorized response.
 func serveHttpAuth(w http.ResponseWriter, r *http.Request) bool {
-	_, _, ok := r.BasicAuth()
-	if !ok {
-		w.Header().Set("WWW-Authenticate", "Basic realm=test")
-		w.WriteHeader(401)
-		w.Write([]byte("Unauthorized"))
-		return false
+	if _, _, ok := r.BasicAuth(); ok {
+		return true
 	}
-	return true
+	w.Header().Set("WWW-Authenticate", "Basic realm=test")
+	w.WriteHeader(401)
+	w.Write([]byte("Unauthorized"))
+	return false
 }
 
-// Handler for HTTP tunneling.
 func tunnelHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodConnect {
 		// This is a request that doesn't require tunneling, use the default handler.
 		httpHandler(w, r)
 		return
 	}
-	// All https requests will be forwarded to the HTTPS proxy running on the set HTTPS port
+
+	// All https requests will be forwarded to the HTTPS proxy running on the set HTTPS port.
 	httpsHost := "localhost:" + strconv.Itoa(*httpsPort)
 	dst, err := net.DialTimeout("tcp", httpsHost, 3*time.Second)
 	if err != nil {
@@ -274,8 +284,10 @@ func tunnelHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "error hijacking connection", http.StatusInternalServerError)
 		return
 	}
-	// Save a copy of the last tunneled hostname, used for certificate generation if SNI is not available.
-	lastTunHost = r.URL.Hostname()
+
+	// Save for certificate generation if SNI is not available.
+	lastTunneledHost = r.URL.Hostname()
+
 	go forward(dst, hijackedConn)
 	go forward(hijackedConn, dst)
 }
@@ -287,40 +299,61 @@ func forward(dst io.WriteCloser, src io.ReadCloser) {
 }
 
 func httpHandler(w http.ResponseWriter, r *http.Request) {
-	if r.URL.EscapedPath() == "/proxy.pac" {
-		serveProxyConfigurationScript(w, r)
+	switch r.URL.EscapedPath() {
+	case "/proxy.pac":
+		servePAC(w, r)
 		return
-	}
-	if r.URL.EscapedPath() == "/echo" {
+	case "/echo":
 		serveEcho(w, r)
 		return
-	}
-	if r.URL.EscapedPath() == "/root.cer" {
+	case "/root.cer":
 		serveRootCert(w, r)
 		return
-	}
-	if r.URL.EscapedPath() == "/web-feature-tests/http-auth/" {
+	case "/web-feature-tests/http-auth/":
 		if !serveHttpAuth(w, r) {
 			return
 		}
 	}
+
 	if strings.HasPrefix(r.URL.EscapedPath(), "/web-feature-tests") {
-		testcaseHandler := http.FileServer(http.Dir("."))
-		testcaseHandler.ServeHTTP(w, r)
+		tc := http.FileServer(http.Dir("."))
+		tc.ServeHTTP(w, r)
 		return
 	}
-	// Serve an index file that explains how to use the different testcases.
+
+	// An index explaining how to use the different testcases.
 	http.ServeFile(w, r, "index.html")
 }
 
+const welcomeFmt = `
+
+----Welcome to Trickuri!----
+
+This tool facilitates testing of applications that displays URLs to users.
+Trickuri is ready to receive requests.
+
+1.) Download the root certificate at http://localhost:%d/root.cer and import it
+into your browser/OS certificate store. See README.md for instructions on how to
+import a root certificate.
+
+2.) Set the proxy server of the application under test to
+http://localhost:%[1]d/proxy.pac or localhost:%[1]d. Using the PAC file will
+pass through requests to google.com and microsoft.com for common Chrome/Windows
+requests. See https://www.chromium.org/developers/design-documents/network-settings
+for instructions on configuring Chrome's proxy server, if you are testing Chrome.
+
+3.) Visit https://example.com/ (or any other URL) to see a list of test cases.
+
+`
+
 func main() {
 	flag.Parse()
-	err := os.MkdirAll(*directory, os.ModePerm)
-	if err != nil {
+
+	if err := os.MkdirAll(*directory, os.ModePerm); err != nil {
 		log.Fatal(err)
 	}
-	certMap = make(map[string]*tls.Certificate)
-	rootCert, err := loadOrCreateRootCertificate()
+
+	rootCert, err := rootCertificate(*directory)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -330,38 +363,31 @@ func main() {
 	}
 	caKey = rootCert.PrivateKey
 
-	fmt.Println("\n")
-	fmt.Println("----Welcome to Trickuri!----")
-	fmt.Println("This tool facilitates testing of applications that displays URLs to users.\n")
-	fmt.Println("Trickuri is ready to receive requests.\n")
+	fmt.Printf(welcomeFmt, *port, *port, *port)
 
-	fmt.Printf("1.) Download the root certificate at http://localhost:%d/root.cer and import it into your browser/OS certificate store. See README.md for instructions on how to import a root certificate.\n", *port)
-	fmt.Printf("2.) Set the proxy server of the application under test to \"http://localhost:%[1]d/proxy.pac\" or localhost:%[1]d. Using the pac file will pass through requests to google.com and microsoft.com for common Chrome/Windows requests. See https://www.chromium.org/developers/design-documents/network-settings for instructions on configuring Chrome's proxy server, if you are testing Chrome.\n", *port)
-	fmt.Printf("3.) Visit https://example.com (or any other URL) to see a list of test cases.\n\n")
-
-	cfg := &tls.Config{
-		CipherSuites: []uint16{
-			tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-			tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-		},
-		MinVersion:               tls.VersionTLS12,
-		PreferServerCipherSuites: true,
-		GetCertificate:           certificate,
-	}
-	httpServer := http.Server{
-		Addr:    "localhost:1270",
-		Handler: http.HandlerFunc(tunnelHandler),
-	}
 	httpsServer := http.Server{
-		Addr:      "localhost:" + strconv.Itoa(*httpsPort),
-		TLSConfig: cfg,
-		Handler:   http.HandlerFunc(httpHandler),
+		Addr: "localhost:" + strconv.Itoa(*httpsPort),
+		TLSConfig: &tls.Config{
+			CipherSuites: []uint16{
+				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+				tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+			},
+			MinVersion:               tls.VersionTLS12,
+			PreferServerCipherSuites: true,
+			GetCertificate:           certificate,
+		},
+		Handler: http.HandlerFunc(httpHandler),
 	}
 	go func() {
 		if err := httpsServer.ListenAndServeTLS("", ""); err != nil {
 			log.Fatal(err)
 		}
 	}()
+
+	httpServer := http.Server{
+		Addr:    "localhost:" + strconv.Itoa(*port),
+		Handler: http.HandlerFunc(tunnelHandler),
+	}
 	if err := httpServer.ListenAndServe(); err != nil {
 		log.Fatal(err)
 	}
