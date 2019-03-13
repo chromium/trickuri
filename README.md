@@ -8,9 +8,13 @@ This tool is designed to allow testing of applications' display of URLs.
 
 URLs are often the only source of identity information available when making
 security decisions in a web browser or other context, but URL syntax is
-complicated and subject to a wide variety of spoofing attacks. Trickuri allows
-easy exercise of common sources of spoofing vulnerabilities to ensure
-applications are robust in their display of URLs.
+complicated and subject to a wide variety of spoofing attacks. The Chromium
+project maintains a [set of URL display guidelines][url-display-guidelines] that
+covers best practices and pitfalls of URL display. Trickuri allows easy exercise
+of common sources of spoofing vulnerabilities to ensure applications are robust
+in their display of URLs.
+
+[url-display-guidelines]: https://chromium.googlesource.com/chromium/src/+/master/docs/security/url_display_guidelines/url_display_guidelines.md
 
 ## Implementation
 
