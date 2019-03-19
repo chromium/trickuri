@@ -363,7 +363,7 @@ func main() {
 	}
 	caKey = rootCert.PrivateKey
 
-	fmt.Printf(welcomeFmt, *port, *port, *port)
+	fmt.Printf(welcomeFmt, *port)
 
 	httpsServer := http.Server{
 		Addr: "localhost:" + strconv.Itoa(*httpsPort),
