@@ -43,6 +43,7 @@ var (
 	port      = flag.Int("p", 1270, "port on which to listen")
 	httpsPort = flag.Int("h", 8443, "port on which the HTTPS proxy will listen")
 	directory = flag.String("d", userHomeDir()+"/.config/trickuri", "default directory in which to save certificates")
+	testIndex = flag.String("i", "index.html", "default file location contating test index")
 )
 
 var (
@@ -322,7 +323,7 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// An index explaining how to use the different testcases.
-	http.ServeFile(w, r, "index.html")
+	http.ServeFile(w, r, *testIndex)
 }
 
 const welcomeFmt = `
